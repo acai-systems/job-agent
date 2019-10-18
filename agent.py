@@ -33,7 +33,8 @@ class Publisher:
     def progress(self, message):
         print("sending", message)
         self.__r.publish(
-            "progress", "%d:%d:%s".format(self.__job_id, self.__user_id, message)
+            "progress", "{}:{}:{}".format(
+                self.__job_id, self.__user_id, message)
         )
         print("sent", message)
 
