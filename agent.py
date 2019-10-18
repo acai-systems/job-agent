@@ -31,12 +31,11 @@ class Publisher:
         self.__r = redis.Redis(host=host, port=port)
 
     def progress(self, message):
-        """
+        print("sending", message)
         self.__r.publish(
             "progress", "%d:%d:%s".format(self.__job_id, self.__user_id, message)
         )
-        """
-        return
+        print("sent", message)
 
 
 if __name__ == "__main__":
