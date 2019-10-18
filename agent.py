@@ -48,7 +48,7 @@ if __name__ == "__main__":
         output_file_set = os.environ["OUTPUT_FILE_SET"]
         code = os.environ["CODE"]
         command = os.environ["COMMAND"]
-        data_lake = os.environ["DATA_LAKE"]
+        data_lake = os.environ["DATA_LAKE_MOUNT_PATH"]
         redis_host = os.environ["REDIS_HOST"]
         redis_port = os.environ["REDIS_PORT"]
         redis_pwd = os.environ["REDIS_PWD"]
