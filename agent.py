@@ -83,7 +83,7 @@ if __name__ == "__main__":
         remote_output_path = path.join("/", remote_output_path) + "/"
 
         l_r_mapping, _ = File.convert_to_file_mapping(
-            remote_output_path, [output_path])
+            [output_path], remote_output_path)
         File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
         # TODO upload log
