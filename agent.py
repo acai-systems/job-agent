@@ -1,11 +1,13 @@
-import requests
+import os
 import subprocess
-import os, shutil, sys
-import virtualenv
+import sys
 import zipfile
-import json
+from os import path
 
-REDIS_HOST_NAME = "10.128.62.19"
+import redis as redis
+
+from acaisdk.fileset import FileSet
+from acaisdk.file import File
 
 
 class cd:
@@ -23,21 +25,18 @@ class cd:
 
 
 class Publisher:
-    __r = redis.Redis(host=REDIS_HOST_NAME, port=6379)
-
-    def __init__(self, job_id, user_id):
+    def __init__(self, job_id, user_id, host, port):
         self.__job_id = job_id
         self.__user_id = user_id
+        self.__r = redis.Redis(host=host, port=port)
 
     def progress(self, message):
+        """
         self.__r.publish(
             "progress", "%d:%d:%s".format(self.__job_id, self.__user_id, message)
         )
-
-    def log(self, message):
-        self.__r.publish(
-            "log", "%d:%d:%s".format(self.__job_id, self.__user_id, message)
-        )
+        """
+        return
 
 
 if __name__ == "__main__":
@@ -49,53 +48,45 @@ if __name__ == "__main__":
         output_file_set = os.environ["OUTPUT_FILE_SET"]
         code = os.environ["CODE"]
         command = os.environ["COMMAND"]
-        output_folder = os.environ["OUTPUT_FOLDER"]
         data_lake = os.environ["DATA_LAKE"]
-    except (KeyError, NameError):
+        redis_host = os.environ["REDIS_HOST"]
+        redis_port = os.environ["REDIS_PORT"]
+        redis_pwd = os.environ["REDIS_PWD"]
+    except (KeyError, NameError) as e:
+        print(e)
         sys.exit(1)
 
-    publisher = Publisher(job_id, user_id)
+    publisher = Publisher(
+        job_id, user_id, host=redis_host, port=redis_port)
 
-    with cd("acai-job"):
-        with cd("input"):
-            publisher.progress("Downloading")
-            File.downloadFileSet(input_file_set, ".") # TODO: implement this
+    with cd(data_lake):
+        publisher.progress("Downloading")
+        FileSet.download_file_set(input_file_set, ".", force=True)
 
-        # Create output folder so user can dump output files in it.
-        with cd(output_folder):
-            pass
+        # Download and unzip code
+        code_path = "./" + code
+        File.download({code: code_path})
+        with zipfile.ZipFile(code_path, "r") as ref:
+            ref.extractall()
 
-        with cd("code"):
-            # Download and unzip code
-            File.download({code: "code.zip"})
-            with zipfile.ZipFile("code.zip", "r") as ref:
-                ref.extractall()
+        # Run user code
+        publisher.progress("Running")
+        user_code = subprocess.call(command, shell=True)
 
-            publisher.progress("Running")
-            user_code = subprocess.Popen(
-                command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True
-            )
+        if user_code != 0:
+            publisher.progress("Failed")
+            sys.exit(0)
 
-            log_publisher = subprocess.Popen(
-                ["python3", "../../log_publisher.py", str(job_id)],
-                stdin=user_code.stdout,
-                stdout=subprocess.PIPE,
-            )
-
-        user_code.stdout.close()
-
+        # Upload output and create output file set
         publisher.progress("Uploading")
+        remote_output_path = output_path[1:] if output_path[0] == '.' else output_path
+        remote_output_path = path.join("/", remote_output_path) + "/"
 
-        with cd(output_folder):
-            # TODO: Upload all files in this folder and create an output fileset
+        l_r_mapping, _ = File.convert_to_file_mapping(
+            remote_output_path, [output_path])
+        File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
-        with cd("log"):
-            with open("stdout.txt", "w") as f:
-                f.write(log_publisher.stdout.read().decode())
-            with open("stderr.txt", "w") as f:
-                f.write(user_code.stderr.read().decode())
-            # TODO: Optionally upload these logs to data lake
-        
-        #TODO: Call metadata server to upload file metadata
+        # TODO upload log
 
+        # Job finished
         publisher.progress("Finished")
