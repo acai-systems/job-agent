@@ -25,10 +25,10 @@ class cd:
 
 
 class Publisher:
-    def __init__(self, job_id, user_id, host, port):
+    def __init__(self, job_id, user_id, host, port, pwd=None):
         self.__job_id = job_id
         self.__user_id = user_id
-        self.__r = redis.Redis(host=host, port=port)
+        self.__r = redis.Redis(host=host, port=port, password=pwd)
 
     def progress(self, message):
         print("sending", message)
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     publisher = Publisher(
-        job_id, user_id, host=redis_host, port=redis_port)
+        job_id, user_id, host=redis_host, port=redis_port, pwd=redis_pwd)
 
     with cd(data_lake):
         publisher.progress("Downloading")
