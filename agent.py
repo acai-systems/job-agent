@@ -72,8 +72,8 @@ if __name__ == "__main__":
 
         log_publisher = subprocess.Popen(
             [
-                "python3",
-                "log_publisher.py",
+                "python",
+                "../job-agent/log_publisher.py",
                 job_id,
                 user_id,
                 redis_host,
