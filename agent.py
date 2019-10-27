@@ -31,18 +31,15 @@ class Publisher:
         self.__r = redis.Redis(host=host, port=port, password=pwd)
 
     def progress(self, message):
-        print("sending", message)
         self.__r.publish(
-            "progress", "{}:{}:{}".format(
-                self.__job_id, self.__user_id, message)
+            "job_progress", "{}:{}:{}".format(self.__job_id, self.__user_id, message)
         )
-        print("sent", message)
 
 
 if __name__ == "__main__":
     try:
-        job_id = int(os.environ["JOB_ID"])
-        user_id = int(os.environ["USER_ID"])
+        job_id = os.environ["JOB_ID"]
+        user_id = os.environ["USER_ID"]
         input_file_set = os.environ["INPUT_FILE_SET"]
         output_path = os.environ["OUTPUT_PATH"]
         output_file_set = os.environ["OUTPUT_FILE_SET"]
@@ -57,7 +54,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     publisher = Publisher(
-        job_id, user_id, host=redis_host, port=redis_port, pwd=redis_pwd)
+        job_id, user_id, host=redis_host, port=redis_port, pwd=redis_pwd
+    )
 
     with cd(data_lake):
         publisher.progress("Downloading")
@@ -71,7 +69,26 @@ if __name__ == "__main__":
 
         # Run user code
         publisher.progress("Running")
-        user_code = subprocess.call(command, shell=True)
+
+        log_publisher = subprocess.Popen(
+            [
+                "python",
+                "../job-agent/log_publisher.py",
+                job_id,
+                user_id,
+                redis_host,
+                redis_port,
+                redis_pwd,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+
+        user_code = subprocess.call(
+            command, shell=True, stdout=log_publisher.stdin, stderr=log_publisher.stdin
+        )
+
+        log_publisher.stdin.close()
 
         if user_code != 0:
             publisher.progress("Failed")
@@ -79,14 +96,15 @@ if __name__ == "__main__":
 
         # Upload output and create output file set
         publisher.progress("Uploading")
-        remote_output_path = output_path[1:] if output_path[0] == '.' else output_path
+        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
         remote_output_path = path.join("/", remote_output_path) + "/"
 
-        l_r_mapping, _ = File.convert_to_file_mapping(
-            [output_path], remote_output_path)
+        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
         File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
-        # TODO upload log
+        # TODO write log to file and upload log file
+        # with open("log.txt", "w") as f:
+        #     f.write(log_publisher.stdout.read().decode())
 
         # Job finished
         publisher.progress("Finished")
