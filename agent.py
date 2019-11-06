@@ -84,9 +84,9 @@ if __name__ == "__main__":
 
         l_r_mapping, _ = File.convert_to_file_mapping(
             [output_path], remote_output_path)
-        File.upload(l_r_mapping).as_new_file_set(output_file_set)
+        uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
         # TODO upload log
 
         # Job finished
-        publisher.progress("Finished")
+        publisher.progress("Finished:{}".format((uploaded["id"])))
