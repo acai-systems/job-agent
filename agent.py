@@ -112,10 +112,12 @@ if __name__ == "__main__":
         # Upload output and create output file set
         print("publish")
         sys.stdout.flush()
+        uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
+        
         publisher.progress("Uploading")
         print("upload yoyoyo")
         sys.stdout.flush()
-        uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
+
         print("upload done")
         sys.stdout.flush()
 
