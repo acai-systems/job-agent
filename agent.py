@@ -91,16 +91,16 @@ if __name__ == "__main__":
 
         log_publisher.stdin.close()
 
-        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
-        remote_output_path = path.join("/", remote_output_path) + "/"
-        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
-
         # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
         if not path.exists(output_path):
             os.makedirs(output_path)
         log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
         with open(log_file, "w") as f:
             f.write(log_publisher.stdout.read().decode())
+
+        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
+        remote_output_path = path.join("/", remote_output_path) + "/"
+        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
 
         if user_code != 0:
             publisher.progress("Failed")
