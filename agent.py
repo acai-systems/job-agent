@@ -113,10 +113,11 @@ if __name__ == "__main__":
         print("publish")
         sys.stdout.flush()
         publisher.progress("Uploading")
+        utils.DEBUG = True
         print("upload yoyoyo")
         sys.stdout.flush()
-        utils.DEBUG = True
-        uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
+        # uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
+        uploaded = {'id': output_file_set + ':100'}
         print("upload done")
         sys.stdout.flush()
 
