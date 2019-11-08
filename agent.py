@@ -90,21 +90,27 @@ if __name__ == "__main__":
 
         log_publisher.stdin.close()
 
+        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
+        remote_output_path = path.join("/", remote_output_path) + "/"
+        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
+
+        # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
+        if not path.exists(output_path):
+            os.makedirs(output_path)
+        log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
+        with open(log_file, "w") as f:
+            f.write(log_publisher.stdout.read().decode())
+
         if user_code != 0:
             publisher.progress("Failed")
+            # TODO: THIS IS TEMPORARY
+            File.upload(l_r_mapping)  # DO NOT create fileset
             sys.exit(0)
 
         # Upload output and create output file set
         publisher.progress("Uploading")
-        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
-        remote_output_path = path.join("/", remote_output_path) + "/"
 
-        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
-
-        # TODO write log to file and upload log file
-        # with open("log.txt", "w") as f:
-        #     f.write(log_publisher.stdout.read().decode())
 
         # Job finished
         publisher.progress("Finished:{}".format((uploaded["id"])))
