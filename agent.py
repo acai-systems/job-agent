@@ -85,7 +85,8 @@ if __name__ == "__main__":
         )
 
         user_code = subprocess.call(
-            command, shell=True, stdout=log_publisher.stdin, stderr=log_publisher.stdin
+            command, shell=True, executable="/bin/bash",
+            stdout=log_publisher.stdin, stderr=log_publisher.stdin
         )
 
         log_publisher.stdin.close()
