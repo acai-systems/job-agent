@@ -110,16 +110,9 @@ if __name__ == "__main__":
             sys.exit(0)
 
         # Upload output and create output file set
-        print("publish")
-        sys.stdout.flush()
-        uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
-        
         publisher.progress("Uploading")
-        print("upload yoyoyo")
-        sys.stdout.flush()
 
-        print("upload done")
-        sys.stdout.flush()
+        uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
         # Job finished
         publisher.progress("Finished:{}".format((uploaded["id"])))
