@@ -8,6 +8,7 @@ import redis as redis
 
 from acaisdk.fileset import FileSet
 from acaisdk.file import File
+from acaisdk.utils import utils
 
 
 class cd:
@@ -114,6 +115,7 @@ if __name__ == "__main__":
         publisher.progress("Uploading")
         print("upload yoyoyo")
         sys.stdout.flush()
+        utils.DEBUG = True
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
         print("upload done")
         sys.stdout.flush()
