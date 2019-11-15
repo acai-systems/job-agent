@@ -1,8 +1,7 @@
-import os
 import sys
 from sys import stdin
 import redis
-from acaisdk.meta import Meta
+import json
 
 
 STR_PREFIX = '[ACAI_TAG]'
@@ -28,13 +27,12 @@ def parse_line(line, str_prefix, num_prefix):
         return '[ACAI_ERROR] {}'.format(e)
 
 
-def commit(fileset, jobid):
+def commit():
     global job_meta, fileset_meta
-    try:
-        Meta.update_file_set_meta(fileset, [], fileset_meta)
-        Meta.update_job_meta(jobid, [], job_meta)
-    except Exception as e:
-        return '[ACAI_ERROR] {}'.format(e)
+    with open('/tmp/tagging_requests.json', 'wb') as f:
+        json.dump({'job': job_meta,
+                   'fileset': fileset_meta},
+                  f)
 
 
 if __name__ == "__main__":
@@ -58,4 +56,4 @@ if __name__ == "__main__":
         r.publish("log", "{}:{}:{}".format(job_id, user_id, line))
         line = stdin.readline()
 
-    commit(os.environ["OUTPUT_FILE_SET"], job_id)
+    commit()

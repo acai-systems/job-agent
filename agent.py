@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import zipfile
+import json
 from os import path
 
 import redis as redis
@@ -9,6 +10,7 @@ import redis as redis
 from acaisdk.fileset import FileSet
 from acaisdk.file import File
 from acaisdk.utils import utils
+from acaisdk.meta import Meta
 
 
 class cd:
@@ -90,7 +92,7 @@ if __name__ == "__main__":
             stdout=log_publisher.stdin, stderr=log_publisher.stdin
         )
 
-
+        log_publisher.stdin.close()
 
         # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
         if not path.exists(output_path):
@@ -114,7 +116,15 @@ if __name__ == "__main__":
 
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
-        log_publisher.stdin.close()
+        try:
+            with open('/tmp/tagging_requests.json', 'wb') as f:
+                all_meta = json.load(f)
+                Meta.update_file_set_meta(output_file_set, [],
+                                          all_meta['fileset'])
+                Meta.update_job_meta(job_id, [],
+                                     all_meta['job'])
+        except:
+            pass
 
         # Job finished
         publisher.progress("Finished:{}".format((uploaded["id"])))
