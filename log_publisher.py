@@ -25,7 +25,7 @@ def parse_line(line, str_prefix, num_prefix):
             elif entity.lower() == 'fileset':
                 fileset_meta[k] = v
     except Exception as e:
-        print(e)
+        return '[ACAI_ERROR] {}'.format(e)
 
 
 def commit(fileset, jobid):
@@ -34,7 +34,7 @@ def commit(fileset, jobid):
         Meta.update_file_set_meta(fileset, [], fileset_meta)
         Meta.update_job_meta(jobid, [], job_meta)
     except Exception as e:
-        print(e)
+        return '[ACAI_ERROR] {}'.format(e)
 
 
 if __name__ == "__main__":
@@ -52,7 +52,9 @@ if __name__ == "__main__":
     line = stdin.readline()
     while line:
         sys.stdout.write(line)
-        parse_line(line, STR_PREFIX, NUM_PREFIX)
+        errmsg = parse_line(line, STR_PREFIX, NUM_PREFIX)
+        if errmsg:
+            r.publish("log", "{}:{}:{}".format(job_id, user_id, errmsg))
         r.publish("log", "{}:{}:{}".format(job_id, user_id, line))
         line = stdin.readline()
 
