@@ -9,6 +9,7 @@ import redis as redis
 
 from acaisdk.fileset import FileSet
 from acaisdk.file import File
+from acaisdk.meta import Meta
 
 
 class cd:
@@ -35,6 +36,29 @@ class Publisher:
         self.__r.publish(
             "job_progress", "{}:{}:{}".format(self.__job_id, self.__user_id, message)
         )
+
+
+STR_PREFIX = "[ACAI_TAG]"
+NUM_PREFIX = "[ACAI_TAG_NUM]"
+job_meta = {}
+fileset_meta = {}
+
+
+def parse_tag_requests(line):
+    global job_meta, fileset_meta, STR_PREFIX, NUM_PREFIX
+    try:
+        if line.startswith(STR_PREFIX) or line.startswith(NUM_PREFIX):
+            prefix, entity, kv_pair = line.strip().split(maxsplit=2)
+            k, v = kv_pair.split("=", maxsplit=1)
+            if prefix == NUM_PREFIX:
+                v = float(v)
+
+            if entity.lower() == "job":
+                job_meta[k] = v
+            elif entity.lower() == "fileset":
+                fileset_meta[k] = v
+    except Exception as e:
+        return "[ACAI_ERROR] {}".format(e)
 
 
 if __name__ == "__main__":
@@ -73,7 +97,7 @@ if __name__ == "__main__":
 
         log_publisher = subprocess.Popen(
             [
-                "python",
+                "python3",
                 "../job-agent/log_publisher.py",
                 job_id,
                 user_id,
@@ -82,6 +106,7 @@ if __name__ == "__main__":
                 redis_pwd,
             ],
             stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
         )
 
         start = time.time()
@@ -96,17 +121,35 @@ if __name__ == "__main__":
 
         log_publisher.stdin.close()
 
+        # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
+        if not path.exists(output_path):
+            os.makedirs(output_path)
+        log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
+        with open(log_file, "w") as f:
+            for line in log_publisher.stdout:
+                parse_tag_requests(line.decode())
+                f.write(line.decode())
+
+        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
+        remote_output_path = path.join("/", remote_output_path) + "/"
+        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
+
         if user_code != 0:
             publisher.progress("Failed")
+            # TODO: THIS IS TEMPORARY
+            File.upload(l_r_mapping)  # DO NOT create fileset
             sys.exit(0)
 
         # Upload output and create output file set
         publisher.progress("Uploading")
-        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
-        remote_output_path = path.join("/", remote_output_path) + "/"
 
-        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
+
+        try:
+            Meta.update_file_set_meta(uploaded["id"], [], fileset_meta)
+            # Meta.update_job_meta(job_id, [], job_meta)
+        except Exception as e:
+            print(e)
 
         # Job finished, message format <job_id>:<user_id>:Finished:<runtime>:<finish_time>:<upload_fileset_name>
         publisher.progress(

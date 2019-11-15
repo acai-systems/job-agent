@@ -1,7 +1,5 @@
-import os
 import sys
 from sys import stdin
-
 import redis
 
 if __name__ == "__main__":
@@ -21,4 +19,3 @@ if __name__ == "__main__":
         sys.stdout.write(line)
         r.publish("log", "{}:{}:{}".format(job_id, user_id, line))
         line = stdin.readline()
-
