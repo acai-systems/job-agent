@@ -121,7 +121,9 @@ if __name__ == "__main__":
             os.makedirs(output_path)
         log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
         with open(log_file, "w") as f:
+            print("INNNN")
             for line in log_publisher.stdout:
+                print("NO WAYY", line)
                 parse_tag_requests(line)
                 f.write(line.decode())
 
