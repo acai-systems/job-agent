@@ -14,17 +14,16 @@ fileset_meta = {}
 def parse_line(line, str_prefix, num_prefix):
     global job_meta, fileset_meta
     try:
-        prefix, entity, kv_pair = line.strip().split(maxsplit=3)
-        k, v = kv_pair.split('=', 1)
-        if prefix == num_prefix:
-            v = float(v)
-        elif prefix != str_prefix:
-            return
+        if line.startswith(str_prefix) or line.startswith(num_prefix):
+            prefix, entity, kv_pair = line.strip().split(maxsplit=3)
+            k, v = kv_pair.split('=', 1)
+            if prefix == num_prefix:
+                v = float(v)
 
-        if entity.lower() == 'job':
-            job_meta[k] = v
-        elif entity.lower() == 'fileset':
-            fileset_meta[k] = v
+            if entity.lower() == 'job':
+                job_meta[k] = v
+            elif entity.lower() == 'fileset':
+                fileset_meta[k] = v
     except Exception as e:
         print(e)
 
