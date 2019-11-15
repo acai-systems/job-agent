@@ -1,39 +1,6 @@
 import sys
 from sys import stdin
 import redis
-import json
-
-
-STR_PREFIX = '[ACAI_TAG]'
-NUM_PREFIX = '[ACAI_TAG_NUM]'
-job_meta = {}
-fileset_meta = {}
-
-
-def parse_line(line, str_prefix, num_prefix):
-    global job_meta, fileset_meta
-    try:
-        if line.startswith(str_prefix) or line.startswith(num_prefix):
-            prefix, entity, kv_pair = line.strip().split(maxsplit=2)
-            k, v = kv_pair.split('=', maxsplit=1)
-            if prefix == num_prefix:
-                v = float(v)
-
-            if entity.lower() == 'job':
-                job_meta[k] = v
-            elif entity.lower() == 'fileset':
-                fileset_meta[k] = v
-    except Exception as e:
-        return '[ACAI_ERROR] {}'.format(e)
-
-
-def commit():
-    global job_meta, fileset_meta
-    with open('/tmp/tagging_requests.json', 'wb') as f:
-        json.dump({'job': job_meta,
-                   'fileset': fileset_meta},
-                  f)
-
 
 if __name__ == "__main__":
     if len(sys.argv) < 5:
@@ -50,10 +17,5 @@ if __name__ == "__main__":
     line = stdin.readline()
     while line:
         sys.stdout.write(line)
-        errmsg = parse_line(line, STR_PREFIX, NUM_PREFIX)
-        if errmsg:
-            r.publish("log", "{}:{}:{}".format(job_id, user_id, errmsg))
         r.publish("log", "{}:{}:{}".format(job_id, user_id, line))
         line = stdin.readline()
-
-    commit()

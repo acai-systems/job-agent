@@ -2,9 +2,7 @@ import os
 import subprocess
 import sys
 import zipfile
-import json
 from os import path
-
 import redis as redis
 
 from acaisdk.fileset import FileSet
@@ -37,6 +35,30 @@ class Publisher:
         self.__r.publish(
             "job_progress", "{}:{}:{}".format(self.__job_id, self.__user_id, message)
         )
+
+
+
+STR_PREFIX = '[ACAI_TAG]'
+NUM_PREFIX = '[ACAI_TAG_NUM]'
+job_meta = {}
+fileset_meta = {}
+
+
+def parse_tag_requests(line):
+    global job_meta, fileset_meta, STR_PREFIX, NUM_PREFIX
+    try:
+        if line.startswith(STR_PREFIX) or line.startswith(NUM_PREFIX):
+            prefix, entity, kv_pair = line.strip().split(maxsplit=2)
+            k, v = kv_pair.split('=', maxsplit=1)
+            if prefix == NUM_PREFIX:
+                v = float(v)
+
+            if entity.lower() == 'job':
+                job_meta[k] = v
+            elif entity.lower() == 'fileset':
+                fileset_meta[k] = v
+    except Exception as e:
+        return '[ACAI_ERROR] {}'.format(e)
 
 
 if __name__ == "__main__":
@@ -99,7 +121,9 @@ if __name__ == "__main__":
             os.makedirs(output_path)
         log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
         with open(log_file, "w") as f:
-            f.write(log_publisher.stdout.read().decode())
+            for line in log_publisher.stdout:
+                parse_tag_requests(line)
+                f.write(line.decode())
 
         remote_output_path = output_path[1:] if output_path[0] == "." else output_path
         remote_output_path = path.join("/", remote_output_path) + "/"
@@ -117,12 +141,8 @@ if __name__ == "__main__":
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
         try:
-            with open('/tmp/tagging_requests.json', 'wb') as f:
-                all_meta = json.load(f)
-                Meta.update_file_set_meta(output_file_set, [],
-                                          all_meta['fileset'])
-                Meta.update_job_meta(job_id, [],
-                                     all_meta['job'])
+            Meta.update_file_set_meta(output_file_set, [], fileset_meta)
+            # Meta.update_job_meta(job_id, [], job_meta)
         except:
             pass
 
