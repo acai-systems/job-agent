@@ -141,7 +141,7 @@ if __name__ == "__main__":
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
         try:
-            Meta.update_file_set_meta(output_file_set, [], fileset_meta)
+            Meta.update_file_set_meta(uploaded["id"], [], fileset_meta)
             # Meta.update_job_meta(job_id, [], job_meta)
         except Exception as e:
             print(e)
