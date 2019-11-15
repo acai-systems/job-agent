@@ -14,7 +14,7 @@ fileset_meta = {}
 def parse_line(line, str_prefix, num_prefix):
     global job_meta, fileset_meta
     try:
-        prefix, entity, kv_pair = line.strip().split()
+        prefix, entity, kv_pair = line.strip().split(maxsplit=3)
         k, v = kv_pair.split('=', 1)
         if prefix == num_prefix:
             v = float(v)
