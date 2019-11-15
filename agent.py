@@ -3,6 +3,7 @@ import subprocess
 import sys
 import zipfile
 from os import path
+import time
 
 import redis as redis
 
@@ -81,13 +82,17 @@ if __name__ == "__main__":
                 redis_pwd,
             ],
             stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
         )
 
+        start = time.time()
         user_code = subprocess.call(
-            command, shell=True, executable="/bin/bash",
-            stdout=log_publisher.stdin, stderr=log_publisher.stdin
+            command,
+            shell=True,
+            executable="/bin/bash",
+            stdout=log_publisher.stdin,
+            stderr=log_publisher.stdin,
         )
+        end = time.time()
 
         log_publisher.stdin.close()
 
@@ -103,9 +108,9 @@ if __name__ == "__main__":
         l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
-        # TODO write log to file and upload log file
-        # with open("log.txt", "w") as f:
-        #     f.write(log_publisher.stdout.read().decode())
-
-        # Job finished
-        publisher.progress("Finished:{}".format((uploaded["id"])))
+        # Job finished, message format <job_id>:<user_id>:Finished:<runtime>:<finish_time>:<upload_fileset_name>
+        publisher.progress(
+            "Finished:{}:{}:{}".format(
+                int(end - start), int(time.time()), uploaded["id"]
+            )
+        )
