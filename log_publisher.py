@@ -1,8 +1,42 @@
 import os
 import sys
 from sys import stdin
-
 import redis
+from acaisdk.meta import Meta
+
+
+STR_PREFIX = '[ACAI_TAG]'
+NUM_PREFIX = '[ACAI_TAG_NUM]'
+job_meta = {}
+fileset_meta = {}
+
+
+def parse_line(line, str_prefix, num_prefix):
+    global job_meta, fileset_meta
+    try:
+        prefix, entity, kv_pair = line.strip().split()
+        k, v = kv_pair.split('=', 1)
+        if prefix == num_prefix:
+            v = float(v)
+        elif prefix != str_prefix:
+            return
+
+        if entity.lower() == 'job':
+            job_meta[k] = v
+        elif entity.lower() == 'fileset':
+            fileset_meta[k] = v
+    except Exception as e:
+        print(e)
+
+
+def commit(fileset, jobid):
+    global job_meta, fileset_meta
+    try:
+        Meta.update_file_set_meta(fileset, [], fileset_meta)
+        Meta.update_job_meta(jobid, [], job_meta)
+    except Exception as e:
+        print(e)
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 5:
@@ -19,6 +53,8 @@ if __name__ == "__main__":
     line = stdin.readline()
     while line:
         sys.stdout.write(line)
+        parse_line(line, STR_PREFIX, NUM_PREFIX)
         r.publish("log", "{}:{}:{}".format(job_id, user_id, line))
         line = stdin.readline()
 
+    commit(os.environ["OUTPUT_FILE_SET"], job_id)
