@@ -90,7 +90,7 @@ if __name__ == "__main__":
             stdout=log_publisher.stdin, stderr=log_publisher.stdin
         )
 
-        log_publisher.stdin.close()
+
 
         # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
         if not path.exists(output_path):
@@ -113,6 +113,8 @@ if __name__ == "__main__":
         publisher.progress("Uploading")
 
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
+
+        log_publisher.stdin.close()
 
         # Job finished
         publisher.progress("Finished:{}".format((uploaded["id"])))
