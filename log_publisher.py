@@ -1,6 +1,7 @@
 import os
 import sys
 from sys import stdin
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import redis
 from acaisdk.meta import Meta
 
