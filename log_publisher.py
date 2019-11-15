@@ -15,8 +15,8 @@ def parse_line(line, str_prefix, num_prefix):
     global job_meta, fileset_meta
     try:
         if line.startswith(str_prefix) or line.startswith(num_prefix):
-            prefix, entity, kv_pair = line.strip().split(maxsplit=3)
-            k, v = kv_pair.split('=', 1)
+            prefix, entity, kv_pair = line.strip().split(maxsplit=2)
+            k, v = kv_pair.split('=', maxsplit=1)
             if prefix == num_prefix:
                 v = float(v)
 
