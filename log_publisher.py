@@ -17,5 +17,5 @@ if __name__ == "__main__":
     line = stdin.readline()
     while line:
         sys.stdout.write(line)
-        r.publish("log", "{}:{}:{}".format(job_id, user_id, line))
+        # r.publish("log", "{}:{}:{}".format(job_id, user_id, line))
         line = stdin.readline()
