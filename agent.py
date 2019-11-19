@@ -95,40 +95,34 @@ if __name__ == "__main__":
         # Run user code
         publisher.progress("Running")
 
-        log_publisher = subprocess.Popen(
-            [
-                "python3",
-                "../job-agent/log_publisher.py",
-                job_id,
-                user_id,
-                redis_host,
-                redis_port,
-                redis_pwd,
-            ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-        )
-
         start = time.time()
-        user_code = subprocess.call(
+        p = subprocess.Popen(
             command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             shell=True,
-            executable="/bin/bash",
-            stdout=log_publisher.stdin,
-            stderr=log_publisher.stdin,
+            executable="/bin/bash"
         )
         end = time.time()
-
-        log_publisher.stdin.close()
 
         # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
         if not path.exists(output_path):
             os.makedirs(output_path)
         log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
-        with open(log_file, "w") as f:
-            for line in log_publisher.stdout:
+
+        with open(log_file, 'wb') as o_file:
+            while p.poll() is None:
+                line = p.stdout.readline()
+                sys.stdout.write(line.decode())
+                o_file.write(line)
                 parse_tag_requests(line.decode())
-                f.write(line.decode())
+
+            for line in p.stdout:
+                sys.stdout.write(line.decode())
+                o_file.write(line)
+                parse_tag_requests(line.decode())
+
+            user_code = p.poll()
 
         remote_output_path = output_path[1:] if output_path[0] == "." else output_path
         remote_output_path = path.join("/", remote_output_path) + "/"
