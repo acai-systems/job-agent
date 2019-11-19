@@ -103,7 +103,7 @@ if __name__ == "__main__":
             shell=True,
             executable="/bin/bash"
         )
-        end = time.time()
+
 
         # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
         if not path.exists(output_path):
@@ -125,6 +125,8 @@ if __name__ == "__main__":
                 parse_tag_requests(line.decode())
 
             user_code = p.poll()
+
+        end = time.time()
 
         remote_output_path = output_path[1:] if output_path[0] == "." else output_path
         remote_output_path = path.join("/", remote_output_path) + "/"
