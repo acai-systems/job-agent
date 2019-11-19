@@ -114,11 +114,13 @@ if __name__ == "__main__":
             while p.poll() is None:
                 line = p.stdout.readline()
                 sys.stdout.write(line.decode())
+                sys.stdout.flush()
                 o_file.write(line)
                 parse_tag_requests(line.decode())
 
             for line in p.stdout:
                 sys.stdout.write(line.decode())
+                sys.stdout.flush()
                 o_file.write(line)
                 parse_tag_requests(line.decode())
 
