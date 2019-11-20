@@ -129,7 +129,8 @@ if __name__ == "__main__":
         end = time.time()
 
         remote_output_path = output_path[1:] if output_path[0] == "." else output_path
-        remote_output_path = path.join("/", remote_output_path) + "/"
+        remote_output_path = path.join("/", remote_output_path)
+        remote_output_path += '' if remote_output_path.endswith('/') else '/'
         l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
 
         if user_code != 0:
