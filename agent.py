@@ -87,11 +87,10 @@ if __name__ == "__main__":
         FileSet.download_file_set(input_file_set, ".", force=True)
 
         # Download and unzip code
-        if code:
-            code_path = "./" + code
-            File.download({code: code_path})
-            with zipfile.ZipFile(code_path, "r") as ref:
-                ref.extractall()
+        code_path = "./" + code
+        File.download({code: code_path})
+        with zipfile.ZipFile(code_path, "r") as ref:
+            ref.extractall()
 
         # Run user code
         publisher.progress("Running")
@@ -105,22 +104,12 @@ if __name__ == "__main__":
             executable="/bin/bash"
         )
 
-        user_code = p.poll()
-
-        if user_code != 0:
-            publisher.progress("Failed")
-            sys.exit(user_code)
-
-        # job runtime does not include file uploading
-        end = time.time()
-        job_runtime = int(end - start)
-
         # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
         if output_path is '':
-            # do not upload output
+            user_code = p.wait()
+            end = time.time()
             uploaded_fs = ''
         else:
-            # persist output and logs
             if not path.exists(output_path):
                 os.makedirs(output_path)
             log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
@@ -139,17 +128,26 @@ if __name__ == "__main__":
                     o_file.write(line)
                     parse_tag_requests(line.decode())
 
+                user_code = p.poll()
+
+            end = time.time()
 
             remote_output_path = output_path[1:] if output_path[0] == "." else output_path
             remote_output_path = path.join("/", remote_output_path)
             remote_output_path += '' if remote_output_path.endswith('/') else '/'
             l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
 
+            if user_code != 0:
+                publisher.progress("Failed")
+                # TODO: THIS IS TEMPORARY
+                File.upload(l_r_mapping)  # DO NOT create fileset
+                sys.exit(0)
+
             # Upload output and create output file set
             publisher.progress("Uploading")
-            File.upload(l_r_mapping)  # DO NOT create fileset
 
             uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
+            uploaded_fs = uploaded['id']
 
             try:
                 Meta.update_file_set_meta(uploaded["id"], [], fileset_meta)
@@ -159,6 +157,6 @@ if __name__ == "__main__":
 
         # Job finished, message format <job_id>:<user_id>:Finished:<runtime>:<finish_time>:<upload_fileset_name>
         finished_msg = "Finished:{}:{}:{}".format(
-                job_runtime, int(time.time()), uploaded_fs)
+            int(end - start), int(time.time()), uploaded_fs)
         publisher.progress("job_progress", finished_msg)
         publisher.progress("profiling", finished_msg)
