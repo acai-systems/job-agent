@@ -87,10 +87,11 @@ if __name__ == "__main__":
         FileSet.download_file_set(input_file_set, ".", force=True)
 
         # Download and unzip code
-        code_path = "./" + code
-        File.download({code: code_path})
-        with zipfile.ZipFile(code_path, "r") as ref:
-            ref.extractall()
+        if code:
+            code_path = "./" + code
+            File.download({code: code_path})
+            with zipfile.ZipFile(code_path, "r") as ref:
+                ref.extractall()
 
         # Run user code
         publisher.progress("Running")
