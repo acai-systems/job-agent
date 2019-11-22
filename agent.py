@@ -32,9 +32,9 @@ class Publisher:
         self.__user_id = user_id
         self.__r = redis.Redis(host=host, port=port, password=pwd)
 
-    def progress(self, message):
+    def progress(self, message, topic="job_progress"):
         self.__r.publish(
-            "job_progress", "{}:{}:{}".format(self.__job_id, self.__user_id, message)
+            topic, "{}:{}:{}".format(self.__job_id, self.__user_id, message)
         )
 
 
@@ -105,55 +105,60 @@ if __name__ == "__main__":
             executable="/bin/bash"
         )
 
-
-        # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
-        if not path.exists(output_path):
-            os.makedirs(output_path)
-        log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
-
-        with open(log_file, 'wb') as o_file:
-            while p.poll() is None:
-                line = p.stdout.readline()
-                sys.stdout.write(line.decode())
-                sys.stdout.flush()
-                o_file.write(line)
-                parse_tag_requests(line.decode())
-
-            for line in p.stdout:
-                sys.stdout.write(line.decode())
-                sys.stdout.flush()
-                o_file.write(line)
-                parse_tag_requests(line.decode())
-
-            user_code = p.poll()
-
-        end = time.time()
-
-        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
-        remote_output_path = path.join("/", remote_output_path)
-        remote_output_path += '' if remote_output_path.endswith('/') else '/'
-        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
+        user_code = p.poll()
 
         if user_code != 0:
             publisher.progress("Failed")
-            # TODO: THIS IS TEMPORARY
+            sys.exit(user_code)
+
+        # job runtime does not include file uploading
+        end = time.time()
+        job_runtime = int(end - start)
+
+        # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
+        if output_path is '':
+            # do not upload output
+            uploaded_fs = ''
+        else:
+            # persist output and logs
+            if not path.exists(output_path):
+                os.makedirs(output_path)
+            log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
+
+            with open(log_file, 'wb') as o_file:
+                while p.poll() is None:
+                    line = p.stdout.readline()
+                    sys.stdout.write(line.decode())
+                    sys.stdout.flush()
+                    o_file.write(line)
+                    parse_tag_requests(line.decode())
+
+                for line in p.stdout:
+                    sys.stdout.write(line.decode())
+                    sys.stdout.flush()
+                    o_file.write(line)
+                    parse_tag_requests(line.decode())
+
+
+            remote_output_path = output_path[1:] if output_path[0] == "." else output_path
+            remote_output_path = path.join("/", remote_output_path)
+            remote_output_path += '' if remote_output_path.endswith('/') else '/'
+            l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
+
+            # Upload output and create output file set
+            publisher.progress("Uploading")
             File.upload(l_r_mapping)  # DO NOT create fileset
-            sys.exit(0)
 
-        # Upload output and create output file set
-        publisher.progress("Uploading")
+            uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
-        uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
-
-        try:
-            Meta.update_file_set_meta(uploaded["id"], [], fileset_meta)
-            # Meta.update_job_meta(job_id, [], job_meta)
-        except Exception as e:
-            print(e)
+            try:
+                Meta.update_file_set_meta(uploaded["id"], [], fileset_meta)
+                # Meta.update_job_meta(job_id, [], job_meta)
+            except Exception as e:
+                print(e)
 
         # Job finished, message format <job_id>:<user_id>:Finished:<runtime>:<finish_time>:<upload_fileset_name>
-        publisher.progress(
-            "Finished:{}:{}:{}".format(
-                int(end - start), int(time.time()), uploaded["id"]
-            )
-        )
+        finished_msg = "Finished:{}:{}:{}".format(
+                job_runtime, int(time.time()), uploaded_fs)
+        publisher.progress("job_progress", finished_msg)
+        publisher.progress("profiling", finished_msg)
