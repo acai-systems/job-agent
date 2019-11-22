@@ -158,5 +158,5 @@ if __name__ == "__main__":
         # Job finished, message format <job_id>:<user_id>:Finished:<runtime>:<finish_time>:<upload_fileset_name>
         finished_msg = "Finished:{}:{}:{}".format(
             int(end - start), int(time.time()), uploaded_fs)
-        publisher.progress("job_progress", finished_msg)
-        publisher.progress("profiling", finished_msg)
+        publisher.progress(finished_msg)
+        publisher.progress(finished_msg, "profiling")
