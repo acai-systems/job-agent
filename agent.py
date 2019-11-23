@@ -27,20 +27,23 @@ class cd:
 
 
 class Publisher:
-    def __init__(self, job_id, user_id, host, port, pwd=None):
+    def __init__(self, job_id, user_id, job_type, host, port, pwd=None):
         self.__job_id = job_id
         self.__user_id = user_id
+        self.__job_type = job_type
         self.__r = redis.Redis(host=host, port=port, password=pwd)
 
-    def progress(self, message, topic="job_progress"):
+    def progress(self, message):
         self.__r.publish(
-            topic, "{}:{}:{}".format(self.__job_id, self.__user_id, message)
+            "job_progress",
+            "{}:{}:{}:{}".format(
+                self.__job_id, self.__user_id, self.__job_type, message
+            ),
         )
 
 
 STR_PREFIX = "[ACAI_TAG]"
 NUM_PREFIX = "[ACAI_TAG_NUM]"
-job_meta = {}
 fileset_meta = {}
 
 
@@ -53,9 +56,7 @@ def parse_tag_requests(line):
             if prefix == NUM_PREFIX:
                 v = float(v)
 
-            if entity.lower() == "job":
-                job_meta[k] = v
-            elif entity.lower() == "fileset":
+            if entity.lower() == "fileset":
                 fileset_meta[k] = v
     except Exception as e:
         return "[ACAI_ERROR] {}".format(e)
@@ -65,6 +66,7 @@ if __name__ == "__main__":
     try:
         job_id = os.environ["JOB_ID"]
         user_id = os.environ["USER_ID"]
+        job_type = os.environ["JOB_TYPE"]
         input_file_set = os.environ["INPUT_FILE_SET"]
         output_path = os.environ["OUTPUT_PATH"]
         output_file_set = os.environ["OUTPUT_FILE_SET"]
@@ -79,7 +81,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     publisher = Publisher(
-        job_id, user_id, host=redis_host, port=redis_port, pwd=redis_pwd
+        job_id, user_id, job_type, host=redis_host, port=redis_port, pwd=redis_pwd
     )
 
     with cd(data_lake):
@@ -101,62 +103,52 @@ if __name__ == "__main__":
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             shell=True,
-            executable="/bin/bash"
+            executable="/bin/bash",
         )
 
-        # TODO: THIS IS TEMPORARY. Should send log file to log server for persistence
-        if output_path is '':
-            user_code = p.wait()
-            end = time.time()
-            uploaded_fs = ''
-        else:
-            if not path.exists(output_path):
-                os.makedirs(output_path)
-            log_file = path.join(output_path, "job_{}_log.txt".format(job_id))
+        while p.poll() is None:
+            line = p.stdout.readline()
+            sys.stdout.write(line.decode())
+            sys.stdout.flush()
+            parse_tag_requests(line.decode())
 
-            with open(log_file, 'wb') as o_file:
-                while p.poll() is None:
-                    line = p.stdout.readline()
-                    sys.stdout.write(line.decode())
-                    sys.stdout.flush()
-                    o_file.write(line)
-                    parse_tag_requests(line.decode())
+        for line in p.stdout:
+            sys.stdout.write(line.decode())
+            sys.stdout.flush()
+            parse_tag_requests(line.decode())
 
-                for line in p.stdout:
-                    sys.stdout.write(line.decode())
-                    sys.stdout.flush()
-                    o_file.write(line)
-                    parse_tag_requests(line.decode())
+        end = time.time()
 
-                user_code = p.poll()
+        if p.poll() != 0:
+            publisher.progress("Failed")
+            sys.exit(0)
 
-            end = time.time()
-
-            remote_output_path = output_path[1:] if output_path[0] == "." else output_path
-            remote_output_path = path.join("/", remote_output_path)
-            remote_output_path += '' if remote_output_path.endswith('/') else '/'
-            l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
-
-            if user_code != 0:
-                publisher.progress("Failed")
-                # TODO: THIS IS TEMPORARY
-                File.upload(l_r_mapping)  # DO NOT create fileset
-                sys.exit(0)
-
-            # Upload output and create output file set
+        # Upload output and create output file set. Skip for profiling jobs.
+        if output_path:
             publisher.progress("Uploading")
 
-            uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
-            uploaded_fs = uploaded['id']
+            remote_output_path = (
+                output_path[1:] if output_path[0] == "." else output_path
+            )
+            remote_output_path = path.join("/", remote_output_path)
+            remote_output_path += "" if remote_output_path.endswith("/") else "/"
+            l_r_mapping, _ = File.convert_to_file_mapping(
+                [output_path], remote_output_path
+            )
+
+            output_file_set = File.upload(l_r_mapping).as_new_file_set(output_file_set)[
+                "id"
+            ]
 
             try:
-                Meta.update_file_set_meta(uploaded["id"], [], fileset_meta)
-                # Meta.update_job_meta(job_id, [], job_meta)
+                Meta.update_file_set_meta(output_file_set, [], fileset_meta)
             except Exception as e:
                 print(e)
 
-        # Job finished, message format <job_id>:<user_id>:Finished:<runtime>:<finish_time>:<upload_fileset_name>
-        finished_msg = "Finished:{}:{}:{}".format(
-            int(end - start), int(time.time()), uploaded_fs)
-        publisher.progress(finished_msg)
-        publisher.progress(finished_msg, "profiling")
+        # Job finished, message format:
+        # <job_id>:<user_id>:<job_type>:Finished:<runtime>:<finish_time>:<upload_fileset_name>
+        publisher.progress(
+            "Finished:{}:{}:{}".format(
+                int(end - start), int(time.time()), output_file_set
+            )
+        )
