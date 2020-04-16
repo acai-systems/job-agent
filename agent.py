@@ -4,10 +4,14 @@ import sys
 import zipfile
 from os import path
 
+import time
+
 import redis as redis
 
 from acaisdk.fileset import FileSet
 from acaisdk.file import File
+
+from dask.distributed import Client
 
 
 class cd:
@@ -32,8 +36,11 @@ class Publisher:
 
     def progress(self, message):
         self.__r.publish(
-            "job_progress", "{}:{}:{}".format(self.__job_id, self.__user_id, message)
-        )
+            "job_progress",
+            "{}:{}:{}".format(
+                self.__job_id,
+                self.__user_id,
+                message))
 
 
 if __name__ == "__main__":
@@ -49,6 +56,7 @@ if __name__ == "__main__":
         redis_host = os.environ["REDIS_HOST"]
         redis_port = os.environ["REDIS_PORT"]
         redis_pwd = os.environ["REDIS_PWD"]
+        n_workers = os.environ["NUM_WORKER"]
     except (KeyError, NameError) as e:
         print(e)
         sys.exit(1)
@@ -56,6 +64,17 @@ if __name__ == "__main__":
     publisher = Publisher(
         job_id, user_id, host=redis_host, port=redis_port, pwd=redis_pwd
     )
+
+    client = Client('scheduler:8786')
+    dask_workers = client.scheduler_info()['workers']
+
+    # wait till dask workers registered
+    while len(dask_workers) < n_workers:
+        time.sleep(1)
+        dask_workers = client.scheduler_info()['workers']
+        publisher.progress("Waiting dask workers")
+
+    publisher.progress("Dask worker registered")
 
     with cd(data_lake):
         publisher.progress("Downloading")
@@ -97,10 +116,12 @@ if __name__ == "__main__":
 
         # Upload output and create output file set
         publisher.progress("Uploading")
-        remote_output_path = output_path[1:] if output_path[0] == "." else output_path
+        remote_output_path = output_path[1:
+                                         ] if output_path[0] == "." else output_path
         remote_output_path = path.join("/", remote_output_path) + "/"
 
-        l_r_mapping, _ = File.convert_to_file_mapping([output_path], remote_output_path)
+        l_r_mapping, _ = File.convert_to_file_mapping(
+            [output_path], remote_output_path)
         uploaded = File.upload(l_r_mapping).as_new_file_set(output_file_set)
 
         # TODO write log to file and upload log file
