@@ -89,18 +89,18 @@ if __name__ == "__main__":
         pwd=redis_pwd)
 
     with cd(data_lake):
-        publisher.progress("Downloading input fileset " + input_file_set)
+        print("Downloading input fileset " + input_file_set)
         FileSet.download_file_set(input_file_set, ".", force=True)
 
         # Download and unzip code
         code_path = "./" + code
-        publisher.progress("Downloading code " + code_path)
+        print("Downloading code " + code_path)
         File.download({code: code_path})
         with zipfile.ZipFile(code_path, "r") as ref:
             ref.extractall()
 
         # Run user code
-        publisher.progress("Running user code")
+        print("Running user code")
 
         start = time.time()
         p = subprocess.Popen(
@@ -124,9 +124,10 @@ if __name__ == "__main__":
 
         end = time.time()
 
-        if p.poll() != 0:
+        ret_code = p.poll()
+        if ret_code != 0:
             publisher.progress("Failed")
-            sys.exit(1)
+            sys.exit(ret_code)
 
         # Upload output and create output file set. Skip for profiling jobs.
         if output_path:
