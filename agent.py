@@ -100,7 +100,7 @@ if __name__ == "__main__":
             ref.extractall()
 
         # Run user code
-        print("Running user code")
+        print("Running user code with command " + command)
 
         start = time.time()
         p = subprocess.Popen(
@@ -127,6 +127,7 @@ if __name__ == "__main__":
         ret_code = p.poll()
         if ret_code != 0:
             publisher.progress("Failed")
+            print("error code: " + str(ret_code))
             sys.exit(ret_code)
 
         # Upload output and create output file set. Skip for profiling jobs.
