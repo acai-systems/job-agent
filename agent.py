@@ -81,21 +81,26 @@ if __name__ == "__main__":
         sys.exit(1)
 
     publisher = Publisher(
-        job_id, user_id, job_type, host=redis_host, port=redis_port, pwd=redis_pwd
-    )
+        job_id,
+        user_id,
+        job_type,
+        host=redis_host,
+        port=redis_port,
+        pwd=redis_pwd)
 
     with cd(data_lake):
-        publisher.progress("Downloading")
+        publisher.progress("Downloading input fileset " + input_file_set)
         FileSet.download_file_set(input_file_set, ".", force=True)
 
         # Download and unzip code
         code_path = "./" + code
+        publisher.progress("Downloading code " + code_path)
         File.download({code: code_path})
         with zipfile.ZipFile(code_path, "r") as ref:
             ref.extractall()
 
         # Run user code
-        publisher.progress("Running")
+        publisher.progress("Running user code")
 
         start = time.time()
         p = subprocess.Popen(
@@ -121,7 +126,7 @@ if __name__ == "__main__":
 
         if p.poll() != 0:
             publisher.progress("Failed")
-            sys.exit(0)
+            sys.exit(1)
 
         # Upload output and create output file set. Skip for profiling jobs.
         if output_path:
@@ -131,14 +136,14 @@ if __name__ == "__main__":
                 output_path[1:] if output_path[0] == "." else output_path
             )
             remote_output_path = path.join("/", remote_output_path)
-            remote_output_path += "" if remote_output_path.endswith("/") else "/"
+            remote_output_path += "" if remote_output_path.endswith(
+                "/") else "/"
             l_r_mapping, _ = File.convert_to_file_mapping(
                 [output_path], remote_output_path
             )
 
-            output_file_set = File.upload(l_r_mapping).as_new_file_set(output_file_set)[
-                "id"
-            ]
+            output_file_set = File.upload(
+                l_r_mapping).as_new_file_set(output_file_set)["id"]
 
             try:
                 Meta.update_file_set_meta(output_file_set, [], fileset_meta)
