@@ -138,15 +138,21 @@ if __name__ == "__main__":
                 output_path[1:] if output_path[0] == "." else output_path
             )
             remote_output_path = path.join("/", remote_output_path)
+
+            print("remote output path: " + remote_output_path)
+
             remote_output_path += "" if remote_output_path.endswith(
                 "/") else "/"
             l_r_mapping, _ = File.convert_to_file_mapping(
                 [output_path], remote_output_path
             )
 
+            print("remote output path: " + remote_output_path)
+
             output_file_set = File.upload(
                 l_r_mapping).as_new_file_set(output_file_set)["id"]
 
+            # Update job meta data
             try:
                 Meta.update_file_set_meta(output_file_set, [], fileset_meta)
             except Exception as e:
