@@ -89,6 +89,7 @@ if __name__ == "__main__":
         pwd=redis_pwd)
 
     with cd(data_lake):
+        publisher.progress("Downloading")
         print("Downloading input fileset " + input_file_set)
         FileSet.download_file_set(input_file_set, ".", force=True)
 
@@ -100,6 +101,7 @@ if __name__ == "__main__":
             ref.extractall()
 
         # Run user code
+        publisher.progress("Running")
         print("Running user code with command " + command)
 
         start = time.time()
@@ -127,7 +129,7 @@ if __name__ == "__main__":
         ret_code = p.poll()
         if ret_code != 0:
             publisher.progress("Failed")
-            print("error code: " + str(ret_code))
+            print("Error code: " + str(ret_code))
             sys.exit(ret_code)
 
         # Upload output and create output file set. Skip for profiling jobs.
@@ -138,8 +140,6 @@ if __name__ == "__main__":
                 output_path[1:] if output_path[0] == "." else output_path
             )
             remote_output_path = path.join("/", remote_output_path)
-
-            print("remote output path: " + remote_output_path)
 
             remote_output_path += "" if remote_output_path.endswith(
                 "/") else "/"
