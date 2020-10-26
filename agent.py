@@ -123,12 +123,13 @@ if __name__ == "__main__":
     workspace = os.path.dirname(os.path.realpath('__file__'))
 
     with cd(cache):
-        print('listing files in /cache')
-        print(os.listdir())
+        print("*" * 20)
+        print('listing files in %s' % os.path.join(workspace, cache))
         for path, subdirs, files in os.walk(os.path.dirname(os.path.realpath('__file__'))):
             for name in files:
                 print(os.path.join(path, name))
-
+        print("*" * 20)
+        
         if use_cache == "true":
             print("use_cache is true, checking cache")
             cached_file_set_path = input_file_set_in_case = check_input_file_set(project_id, input_file_set)
@@ -141,7 +142,7 @@ if __name__ == "__main__":
         # copy_tree(cached_file_set_path, '.')
 
         # else:
-        print("Downloading from data lake")
+        # print("Downloading from data lake")
         FileSet.download_file_set(input_file_set, ".", force=True)
 
         # Download and unzip code
@@ -153,7 +154,9 @@ if __name__ == "__main__":
         # Upload to cache and set __cached__ to true
         input_file_set_dir = os.listdir()[0]
         if os.path.isdir:
-            print('copying %s to %s', input_file_set_dir, os.path.join(workspace, cache, project_id, input_file_set_dir))
+            print("*" * 20)
+            print('Uploading to cache: %s to %s' % input_file_set_dir, os.path.join(workspace, cache, project_id, input_file_set_dir))
+            print("*" * 20)
             copy_tree(input_file_set_dir, os.path.join(workspace, cache, project_id, input_file_set_dir))
         # Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
 
