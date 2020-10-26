@@ -155,7 +155,7 @@ if __name__ == "__main__":
         input_file_set_dir = os.listdir()[0]
         if os.path.isdir:
             print("*" * 20)
-            print('Uploading to cache: %s to %s' % input_file_set_dir, os.path.join(workspace, cache, project_id, input_file_set_dir))
+            print('Uploading to cache: %s to %s' % (input_file_set_dir, os.path.join(workspace, cache, project_id, input_file_set_dir)))
             print("*" * 20)
             copy_tree(input_file_set_dir, os.path.join(workspace, cache, project_id, input_file_set_dir))
         # Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
