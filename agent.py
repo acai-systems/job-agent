@@ -123,7 +123,7 @@ if __name__ == "__main__":
     workspace = os.path.dirname(os.path.realpath('__file__'))
 
     with cd(cache):
-        print(os.listdir())
+        print("cache: ", os.listdir())
         if use_cache == "true":
             print("use_cache is true, checking cache")
             cached_file_set_path = input_file_set_in_case = check_input_file_set(project_id, input_file_set)
@@ -132,8 +132,8 @@ if __name__ == "__main__":
         publisher.progress("Downloading")
 
         # if cached_file_set_path != "":
-        print("Downloading from cache")
-        copy_tree(cached_file_set_path, '.')
+        # print("Downloading from cache")
+        # copy_tree(cached_file_set_path, '.')
 
         # else:
         print("Downloading from data lake")
