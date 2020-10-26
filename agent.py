@@ -85,14 +85,14 @@ def download_input_and_code(project_id, input_file_set):
         os.makedirs(project_cache_folder)
 
     if match_file_set['status'] == 'success' & len(match_file_set['data']) > 0:
-        publisher.progress("Downloading input file set from cache")
+        print("Downloading input file set from cache")
 
         cached_file_id = match_file_set['data'][0]['_id']
         to_dir = os.path.dirname(os.path.realpath('__file__'))
         from_dir = os.path.join(project_cache_folder, cached_file_id)
         copy_tree(from_dir, to_dir)
     else:
-        publisher.progress("Downloading input file set from Data Lake")
+        print("Downloading input file set from Data Lake")
 
         FileSet.download_file_set(input_file_set, ".", force=True)
         try:
@@ -136,11 +136,10 @@ if __name__ == "__main__":
         publisher.progress("Downloading")
 
         if use_cache == "true":
-            publisher.progress("Checking cache")
+            print("use_cache is true, checking cache")
             download_input_and_code(project_id, input_file_set)
         else:
-            publisher.progress("Downloading from Data Lake")
-
+            print("use_cache is false, downloading from data lake")
             FileSet.download_file_set(input_file_set, ".", force=True)
 
             # Download and unzip code
