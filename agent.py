@@ -80,6 +80,8 @@ def download_input_and_code(project_id, input_file_set):
     #     Condition("__hash__").value(code_file_hash), \
     # )
 
+    print('current directry is :', os.path.dirname(os.path.realpath('__file__')))
+
     project_cache_folder = os.path.join('cache', project_id)
     if not os.path.exists(project_cache_folder):
         os.makedirs(project_cache_folder)
@@ -136,7 +138,7 @@ if __name__ == "__main__":
         port=redis_port,
         pwd=redis_pwd)
 
-    with cd(data_lake):
+    with cd(""):
         publisher.progress("Downloading")
 
         if use_cache == "true":
