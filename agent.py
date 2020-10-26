@@ -84,7 +84,7 @@ def download_input_and_code(project_id, input_file_set):
     if not os.path.exists(project_cache_folder):
         os.makedirs(project_cache_folder)
 
-    if match_file_set['status'] == 'success' & len(match_file_set['data']) > 0:
+    if match_file_set['status'] == 'success' and len(match_file_set['data']) > 0:
         print("Downloading input file set from cache")
 
         cached_file_id = match_file_set['data'][0]['_id']
