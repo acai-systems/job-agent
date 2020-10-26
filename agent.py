@@ -71,7 +71,7 @@ def download_input_and_code(project_id, input_file_set):
     # code_file_id = Meta.get_file_meta(code)['data'][0]["_id"]
     # code_file_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
 
-    match_file_set = Meta.find_file( \
+    match_file_set = Meta.find_file_set( \
         Condition("__cached__").value(True), \
         Condition("__hash__").value(fileset_hash), \
     )
