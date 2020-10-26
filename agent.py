@@ -67,7 +67,7 @@ def parse_tag_requests(line):
 def download_input_and_code(project_id, input_file_set):
     fileset_id = Meta.get_file_set_meta(input_file_set)['data'][0]["_id"]
     fileset_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
-
+        
     # code_file_id = Meta.get_file_meta(code)['data'][0]["_id"]
     # code_file_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
 
@@ -136,8 +136,7 @@ if __name__ == "__main__":
         port=redis_port,
         pwd=redis_pwd)
 
-    with cd("./cache"):
-        print('current directry is :', os.path.dirname(os.path.realpath('__file__')))
+    print(os.listdir())
 
     with cd(data_lake):
         publisher.progress("Downloading")
