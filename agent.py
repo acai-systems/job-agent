@@ -64,48 +64,29 @@ def parse_tag_requests(line):
         return "[ACAI_ERROR] {}".format(e)
 
 
-def download_input_and_code(project_id, input_file_set):
-    fileset_id = Meta.get_file_set_meta(input_file_set)['data'][0]["_id"]
-    fileset_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
+def check_input_file_set(project_id, input_file_set):
+    try:
+        fileset_id = Meta.get_file_set_meta(input_file_set)['data'][0]["_id"]
+        fileset_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
+
+        match_file_set = Meta.find_file_set( \
+            Condition("__cached__").value(True), \
+            Condition("__hash__").value(fileset_hash))
         
-    # code_file_id = Meta.get_file_meta(code)['data'][0]["_id"]
-    # code_file_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
+        cache_project_folder = os.path.join(os.path.dirname(os.path.realpath('__file__')), project_id)
+        if not os.path.exists(cache_project_folder):
+            print('creating project folder', cache_project_folder)
+            os.makedirs(cache_project_folder)
+        
+        if match_file_set['status'] == 'success' and len(match_file_set['data']) > 0:
+            cached_file_id = match_file_set['data'][0]['_id']
 
-    match_file_set = Meta.find_file_set( \
-        Condition("__cached__").value(True), \
-        Condition("__hash__").value(fileset_hash), \
-    )
-    # match_code_file = Meta.find_file( \
-    #     Condition("__cached__").value(True), \
-    #     Condition("__hash__").value(code_file_hash), \
-    # )
+            return os.path.join(cache_project_folder, cached_file_id)
+        else: 
+            return ""
 
-    project_cache_folder = os.path.join('cache', project_id)
-    if not os.path.exists(project_cache_folder):
-        os.makedirs(project_cache_folder)
-
-    if match_file_set['status'] == 'success' and len(match_file_set['data']) > 0:
-        print("Downloading input file set from cache")
-
-        cached_file_id = match_file_set['data'][0]['_id']
-        to_dir = os.path.dirname(os.path.realpath('__file__'))
-        from_dir = os.path.join(project_cache_folder, cached_file_id)
-        copy_tree(from_dir, to_dir)
-    else:
-        print("Downloading input file set from Data Lake")
-
-        FileSet.download_file_set(input_file_set, ".", force=True)
-        try:
-            copy_tree('.', os.path.join(project_cache_folder, fileset_id))
-        except:
-            print('copy_tree failed', os.path.join(project_cache_folder, fileset_id))
-        Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
-    
-    # TODO: also check for code file
-    code_path = "./" + code
-    File.download({code: code_path})
-    with zipfile.ZipFile(code_path, "r") as ref:
-        ref.extractall()
+    except Exception:
+        return ""
 
 
 if __name__ == "__main__":
@@ -136,16 +117,25 @@ if __name__ == "__main__":
         port=redis_port,
         pwd=redis_pwd)
 
-    print(os.listdir())
+    # make this env var
+    cache = "cache"
+    cached_file_set_path = ""
+    workspace = os.path.dirname(os.path.realpath('__file__'))
+
+    with cd(cache):
+        if use_cache == "true":
+            print("use_cache is true, checking cache")
+            cached_file_set_path = input_file_set_in_case = check_input_file_set(project_id, input_file_set)
 
     with cd(data_lake):
         publisher.progress("Downloading")
 
-        if use_cache == "true":
-            print("use_cache is true, checking cache")
-            download_input_and_code(project_id, input_file_set)
+        if cached_file_set_path != "":
+            print("Downloading from cache")
+            copy_tree(cached_file_set_path, '.')
+
         else:
-            print("use_cache is false, downloading from data lake")
+            print("Downloading from data lake")
             FileSet.download_file_set(input_file_set, ".", force=True)
 
             # Download and unzip code
@@ -153,6 +143,11 @@ if __name__ == "__main__":
             File.download({code: code_path})
             with zipfile.ZipFile(code_path, "r") as ref:
                 ref.extractall()
+
+            # Upload to cache and set __cached__ to true
+            input_file_set_dir = os.listdir()[0]
+            copy_tree(input_file_set_dir, os.path.join(workspace, project_id, input_file_set_dir))
+            Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
 
         # Run user code
         publisher.progress("Running")
