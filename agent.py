@@ -123,7 +123,11 @@ if __name__ == "__main__":
     workspace = os.path.dirname(os.path.realpath('__file__'))
 
     with cd(cache):
-        print("cache: ", os.listdir())
+        print('listing files in /cache')
+        for path, subdirs, files in os.walk(os.path.dirname(os.path.realpath('__file__'))):
+            for name in files:
+                print(os.path.join(path, name))
+
         if use_cache == "true":
             print("use_cache is true, checking cache")
             cached_file_set_path = input_file_set_in_case = check_input_file_set(project_id, input_file_set)
