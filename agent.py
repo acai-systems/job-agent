@@ -4,6 +4,8 @@ import sys
 import zipfile
 from os import path
 import time
+from shutil import copy2
+from distutils.dir_util import copy_tree
 
 import redis as redis
 
@@ -62,8 +64,49 @@ def parse_tag_requests(line):
         return "[ACAI_ERROR] {}".format(e)
 
 
+def download_input_and_code(project_id, input_file_set):
+    fileset_id = Meta.get_file_set_meta(input_file_set)['data'][0]["_id"]
+    fileset_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
+
+    # code_file_id = Meta.get_file_meta(code)['data'][0]["_id"]
+    # code_file_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
+
+    match_file_set = Meta.find_file( \
+        Condition("__cached__").value(True), \
+        Condition("__hash__").value(fileset_hash), \
+    )
+    # match_code_file = Meta.find_file( \
+    #     Condition("__cached__").value(True), \
+    #     Condition("__hash__").value(code_file_hash), \
+    # )
+
+    project_cache_folder = os.path.join('cache', project_id)
+    if not os.path.exists(project_cache_folder):
+        os.makedirs(project_cache_folder)
+
+    if match_file_set['status'] == 'success' & len(match_file_set['data']) > 0:
+        publisher.progress("Downloading input file set from cache")
+
+        cached_file_id = match_file_set['data'][0]['_id']
+        to_dir = os.path.dirname(os.path.realpath('__file__'))
+        from_dir = os.path.join(project_cache_folder, cached_file_id)
+        copy_tree(from_dir, to_dir)
+    else:
+        publisher.progress("Downloading input file set from Data Lake")
+
+        FileSet.download_file_set(input_file_set, ".", force=True)
+        copy_tree('.', os.path.join(project_cache_folder, fileset_id))
+    
+    # TODO: also check for code file
+    code_path = "./" + code
+    File.download({code: code_path})
+    with zipfile.ZipFile(code_path, "r") as ref:
+        ref.extractall()
+
+
 if __name__ == "__main__":
     try:
+        project_id = os.environ["PROJECT_ID"]
         job_id = os.environ["JOB_ID"]
         user_id = os.environ["USER_ID"]
         job_type = os.environ["JOB_TYPE"]
@@ -76,6 +119,7 @@ if __name__ == "__main__":
         redis_host = os.environ["REDIS_HOST"]
         redis_port = os.environ["REDIS_PORT"]
         redis_pwd = os.environ["REDIS_PWD"]
+        use_cache = os.environ["USE_CACHE"]
     except (KeyError, NameError) as e:
         print(e)
         sys.exit(1)
@@ -86,13 +130,20 @@ if __name__ == "__main__":
 
     with cd(data_lake):
         publisher.progress("Downloading")
-        FileSet.download_file_set(input_file_set, ".", force=True)
 
-        # Download and unzip code
-        code_path = "./" + code
-        File.download({code: code_path})
-        with zipfile.ZipFile(code_path, "r") as ref:
-            ref.extractall()
+        if use_cache == "true":
+            publisher.progress("Checking cache")
+            download_input_and_code(project_id, input_file_set)
+        else:
+            publisher.progress("Downloading from Data Lake")
+
+            FileSet.download_file_set(input_file_set, ".", force=True)
+
+            # Download and unzip code
+            code_path = "./" + code
+            File.download({code: code_path})
+            with zipfile.ZipFile(code_path, "r") as ref:
+                ref.extractall()
 
         # Run user code
         publisher.progress("Running")
