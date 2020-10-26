@@ -147,7 +147,7 @@ if __name__ == "__main__":
 
         # Upload to cache and set __cached__ to true
         input_file_set_dir = os.listdir()[0]
-        copy_tree(input_file_set_dir, os.path.join(workspace, project_id, input_file_set_dir))
+        # copy_tree(input_file_set_dir, os.path.join(workspace, project_id, input_file_set_dir))
         # Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
 
         # Run user code
