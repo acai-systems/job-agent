@@ -123,6 +123,7 @@ if __name__ == "__main__":
     workspace = os.path.dirname(os.path.realpath('__file__'))
 
     with cd(cache):
+        print(os.listdir())
         if use_cache == "true":
             print("use_cache is true, checking cache")
             cached_file_set_path = input_file_set_in_case = check_input_file_set(project_id, input_file_set)
@@ -130,24 +131,24 @@ if __name__ == "__main__":
     with cd(data_lake):
         publisher.progress("Downloading")
 
-        if cached_file_set_path != "":
-            print("Downloading from cache")
-            copy_tree(cached_file_set_path, '.')
+        # if cached_file_set_path != "":
+        print("Downloading from cache")
+        copy_tree(cached_file_set_path, '.')
 
-        else:
-            print("Downloading from data lake")
-            FileSet.download_file_set(input_file_set, ".", force=True)
+        # else:
+        print("Downloading from data lake")
+        FileSet.download_file_set(input_file_set, ".", force=True)
 
-            # Download and unzip code
-            code_path = "./" + code
-            File.download({code: code_path})
-            with zipfile.ZipFile(code_path, "r") as ref:
-                ref.extractall()
+        # Download and unzip code
+        code_path = "./" + code
+        File.download({code: code_path})
+        with zipfile.ZipFile(code_path, "r") as ref:
+            ref.extractall()
 
-            # Upload to cache and set __cached__ to true
-            input_file_set_dir = os.listdir()[0]
-            copy_tree(input_file_set_dir, os.path.join(workspace, project_id, input_file_set_dir))
-            Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
+        # Upload to cache and set __cached__ to true
+        input_file_set_dir = os.listdir()[0]
+        copy_tree(input_file_set_dir, os.path.join(workspace, project_id, input_file_set_dir))
+        # Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
 
         # Run user code
         publisher.progress("Running")
