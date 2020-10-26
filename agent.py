@@ -95,7 +95,11 @@ def download_input_and_code(project_id, input_file_set):
         publisher.progress("Downloading input file set from Data Lake")
 
         FileSet.download_file_set(input_file_set, ".", force=True)
-        copy_tree('.', os.path.join(project_cache_folder, fileset_id))
+        try:
+            copy_tree('.', os.path.join(project_cache_folder, fileset_id))
+        except:
+            print('copy_tree failed', os.path.join(project_cache_folder, fileset_id))
+        Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
     
     # TODO: also check for code file
     code_path = "./" + code
