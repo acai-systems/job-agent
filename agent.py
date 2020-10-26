@@ -11,7 +11,7 @@ import redis as redis
 
 from acaisdk.fileset import FileSet
 from acaisdk.file import File
-from acaisdk.meta import Meta
+from acaisdk.meta import *
 
 
 class cd:
