@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     with cd(cache):
         print('listing files in /cache')
-        print(os.listdir)
+        print(os.listdir())
         for path, subdirs, files in os.walk(os.path.dirname(os.path.realpath('__file__'))):
             for name in files:
                 print(os.path.join(path, name))
@@ -195,7 +195,7 @@ if __name__ == "__main__":
             remote_output_path = (
                 output_path[1:] if output_path[0] == "." else output_path
             )
-            remote_output_path = path.join("/", remote_output_path)
+            remote_output_path = os.path.join("/", remote_output_path)
 
             remote_output_path += "" if remote_output_path.endswith(
                 "/") else "/"
