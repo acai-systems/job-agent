@@ -76,10 +76,7 @@ def check_input_file_set(project_id, input_file_set):
         cache_project_folder = os.path.join(os.path.dirname(os.path.realpath('__file__')), project_id)
         
         if match_file_set['status'] == 'success' and len(match_file_set['data']) > 0:
-            start = timeit.default_timer()
             cached_file_id = match_file_set['data'][0]['_id']
-            stop = timeit.default_timer()
-            print('[cache]: cache hit, downloading from cache, total time: ', stop - start)  
         else: 
             cached_file_id = Meta.get_file_set_meta(input_file_set)['data'][0]['_id']
             start = timeit.default_timer()
@@ -142,7 +139,10 @@ if __name__ == "__main__":
         publisher.progress("Downloading")
 
         if cached_file_set_path != "":
+            start = timeit.default_timer()
             copy_tree(cached_file_set_path, '.')
+            stop = timeit.default_timer()
+            print('[cache]: cache hit, downloading from cache, total time: ', stop - start)  
 
         else:
             FileSet.download_file_set(input_file_set, ".", force=True)
