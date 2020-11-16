@@ -4,6 +4,7 @@ import sys
 import zipfile
 from os import path
 import time
+import timeit
 from shutil import copy2
 from distutils.dir_util import copy_tree
 
@@ -75,13 +76,17 @@ def check_input_file_set(project_id, input_file_set):
         cache_project_folder = os.path.join(os.path.dirname(os.path.realpath('__file__')), project_id)
         
         if match_file_set['status'] == 'success' and len(match_file_set['data']) > 0:
-            print("Cache hit: downloading from cache")
+            start = timeit.default_timer()
             cached_file_id = match_file_set['data'][0]['_id']
+            stop = timeit.default_timer()
+            print('[cache]: cache hit, downloading from cache, total time: ', stop - start)  
         else: 
-            print("Cache miss: downloading from data lake")
             cached_file_id = Meta.get_file_set_meta(input_file_set)['data'][0]['_id']
+            start = timeit.default_timer()
             FileSet.download_file_set(input_file_set, os.path.join(cache_project_folder, cached_file_id), force=True)
+            stop = timeit.default_timer()
             Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
+            print('[cache]: cache miss, downloading from data lake, total time: ', stop - start)  
 
         return os.path.join(cache_project_folder, cached_file_id)
         
@@ -131,7 +136,6 @@ if __name__ == "__main__":
         print("*" * 20)
         
         if use_cache == "true":
-            print("use_cache is true, checking cache")
             cached_file_set_path = check_input_file_set(project_id, input_file_set)
 
     with cd(data_lake):
