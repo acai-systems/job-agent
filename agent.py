@@ -202,7 +202,7 @@ if __name__ == "__main__":
                 l_r_mapping).as_new_file_set(output_file_set)["id"]
 
             # Copy to cache 
-            local_output_path = os.path.join(os.path.dirname(os.path.realpath('__file__')), remote_output_path)
+            local_output_path = os.path.abspath(output_path)
             cache_output_path = os.path.join(cache, project_id, output_file_set)
             copy_tree(local_output_path, cache_output_path)
             fileset_meta['__cached__'] = True
