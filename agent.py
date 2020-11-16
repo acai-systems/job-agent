@@ -4,12 +4,14 @@ import sys
 import zipfile
 from os import path
 import time
+from shutil import copy2
+from distutils.dir_util import copy_tree
 
 import redis as redis
 
 from acaisdk.fileset import FileSet
 from acaisdk.file import File
-from acaisdk.meta import Meta
+from acaisdk.meta import *
 
 
 class cd:
@@ -62,8 +64,35 @@ def parse_tag_requests(line):
         return "[ACAI_ERROR] {}".format(e)
 
 
+def check_input_file_set(project_id, input_file_set):
+    try:
+        fileset_hash = Meta.get_file_set_meta(input_file_set)['data'][0]["__hash__"]
+
+        match_file_set = Meta.find_file_set( \
+            Condition("__cached__").value(True), \
+            Condition("__hash__").value(fileset_hash))
+        
+        cache_project_folder = os.path.join(os.path.dirname(os.path.realpath('__file__')), project_id)
+        
+        if match_file_set['status'] == 'success' and len(match_file_set['data']) > 0:
+            print("Cache hit: downloading from cache")
+            cached_file_id = match_file_set['data'][0]['_id']
+        else: 
+            print("Cache miss: downloading from data lake")
+            cached_file_id = Meta.get_file_set_meta(input_file_set)['data'][0]['_id']
+            FileSet.download_file_set(input_file_set, os.path.join(cache_project_folder, cached_file_id), force=True)
+            Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
+
+        return os.path.join(cache_project_folder, cached_file_id)
+        
+    except Exception as e:
+        print(e)
+        return ""
+
+
 if __name__ == "__main__":
     try:
+        project_id = os.environ["PROJECT_ID"]
         job_id = os.environ["JOB_ID"]
         user_id = os.environ["USER_ID"]
         job_type = os.environ["JOB_TYPE"]
@@ -76,6 +105,7 @@ if __name__ == "__main__":
         redis_host = os.environ["REDIS_HOST"]
         redis_port = os.environ["REDIS_PORT"]
         redis_pwd = os.environ["REDIS_PWD"]
+        use_cache = os.environ["USE_CACHE"]
     except (KeyError, NameError) as e:
         print(e)
         sys.exit(1)
@@ -88,14 +118,33 @@ if __name__ == "__main__":
         port=redis_port,
         pwd=redis_pwd)
 
+    workspace = os.path.dirname(os.path.realpath('__file__'))
+    cache = os.path.join(workspace, cache)
+    cached_file_set_path = ""
+
+    with cd(cache):
+        print("*" * 20)
+        print('listing files in %s' % cache)
+        for path, subdirs, files in os.walk(os.path.dirname(os.path.realpath('__file__'))):
+            for name in files:
+                print(os.path.join(path, name))
+        print("*" * 20)
+        
+        if use_cache == "true":
+            print("use_cache is true, checking cache")
+            cached_file_set_path = check_input_file_set(project_id, input_file_set)
+
     with cd(data_lake):
         publisher.progress("Downloading")
-        print("Downloading input fileset " + input_file_set)
-        FileSet.download_file_set(input_file_set, ".", force=True)
 
+        if cached_file_set_path != "":
+            copy_tree(cached_file_set_path, '.')
+
+        else:
+            FileSet.download_file_set(input_file_set, ".", force=True)
+            
         # Download and unzip code
         code_path = "./" + code
-        print("Downloading code " + code_path)
         File.download({code: code_path})
         with zipfile.ZipFile(code_path, "r") as ref:
             ref.extractall()
@@ -139,7 +188,7 @@ if __name__ == "__main__":
             remote_output_path = (
                 output_path[1:] if output_path[0] == "." else output_path
             )
-            remote_output_path = path.join("/", remote_output_path)
+            remote_output_path = os.path.join("/", remote_output_path)
 
             remote_output_path += "" if remote_output_path.endswith(
                 "/") else "/"
@@ -151,6 +200,12 @@ if __name__ == "__main__":
 
             output_file_set = File.upload(
                 l_r_mapping).as_new_file_set(output_file_set)["id"]
+
+            # Copy to cache 
+            local_output_path = os.path.join(os.path.dirname(os.path.realpath('__file__')), remote_output_path)
+            cache_output_path = os.path.join(cache, project_id, output_file_set)
+            copy_tree(local_output_path, cache_output_path)
+            fileset_meta['__cached__'] = True
 
             # Update job meta data
             try:
