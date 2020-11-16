@@ -119,7 +119,7 @@ if __name__ == "__main__":
         pwd=redis_pwd)
 
     workspace = os.path.dirname(os.path.realpath('__file__'))
-    cache = os.path.join(workspace, cache)
+    cache = os.path.join(workspace, 'cache')
     cached_file_set_path = ""
 
     with cd(cache):
