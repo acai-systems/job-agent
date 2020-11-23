@@ -74,16 +74,21 @@ def check_input_file_set(project_id, input_file_set):
             Condition("__hash__").value(fileset_hash))
         
         cache_project_folder = os.path.join(os.path.dirname(os.path.realpath('__file__')), project_id)
-        
+
+        cached_file_id = ""
         if match_file_set['status'] == 'success' and len(match_file_set['data']) > 0:
             cached_file_id = match_file_set['data'][0]['_id']
-        else: 
-            cached_file_id = Meta.get_file_set_meta(input_file_set)['data'][0]['_id']
-            start = timeit.default_timer()
-            FileSet.download_file_set(input_file_set, os.path.join(cache_project_folder, cached_file_id), force=True)
-            stop = timeit.default_timer()
-            Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
-            print('[cache]: cache miss, downloading from data lake, total time: ', stop - start)  
+        
+        if cached_file_id == "" or \
+           not os.path.exists(os.path.join(cache_project_folder, cached_file_id)) or \
+           not os.listdir(os.path.join(cache_project_folder, cached_file_id)):
+           
+           cached_file_id = Meta.get_file_set_meta(input_file_set)['data'][0]['_id']
+           # start = timeit.default_timer()
+           FileSet.download_file_set(input_file_set, os.path.join(cache_project_folder, cached_file_id), force=True)
+           # stop = timeit.default_timer()
+           Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
+           # print('[cache]: cache miss, downloading from data lake, total time: ', stop - start)  
 
         return os.path.join(cache_project_folder, cached_file_id)
         
@@ -108,7 +113,6 @@ if __name__ == "__main__":
         redis_port = os.environ["REDIS_PORT"]
         redis_pwd = os.environ["REDIS_PWD"]
         use_cache = os.environ["USE_CACHE"]
-        use_cache = "false"
     except (KeyError, NameError) as e:
         print(e)
         sys.exit(1)
@@ -140,10 +144,10 @@ if __name__ == "__main__":
         publisher.progress("Downloading")
 
         if cached_file_set_path != "":
-            start = timeit.default_timer()
+            # start = timeit.default_timer()
             copy_tree(cached_file_set_path, '.')
-            stop = timeit.default_timer()
-            print('[cache]: cache hit, downloading from cache, total time: ', stop - start)  
+            # stop = timeit.default_timer()
+            # print('[cache]: cache hit, downloading from cache, total time: ', stop - start)  
 
         else:
             FileSet.download_file_set(input_file_set, ".", force=True)
@@ -207,10 +211,10 @@ if __name__ == "__main__":
                 l_r_mapping).as_new_file_set(output_file_set)["id"]
 
             # Copy to cache 
-            # local_output_path = os.path.abspath(output_path)
-            # cache_output_path = os.path.join(cache, project_id, output_file_set)
-            # copy_tree(local_output_path, cache_output_path)
-            # fileset_meta['__cached__'] = True
+            local_output_path = os.path.abspath(output_path)
+            cache_output_path = os.path.join(cache, project_id, output_file_set)
+            copy_tree(local_output_path, cache_output_path)
+            fileset_meta['__cached__'] = True
 
             # Update job meta data
             try:
