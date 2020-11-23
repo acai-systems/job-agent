@@ -109,6 +109,7 @@ if __name__ == "__main__":
         code = os.environ["CODE"]
         command = os.environ["COMMAND"]
         data_lake = os.environ["DATA_LAKE_MOUNT_PATH"]
+        cache = os.environ["CEPH_CACHE_MOUNT_PATH"]
         redis_host = os.environ["REDIS_HOST"]
         redis_port = os.environ["REDIS_PORT"]
         redis_pwd = os.environ["REDIS_PWD"]
@@ -126,7 +127,7 @@ if __name__ == "__main__":
         pwd=redis_pwd)
 
     workspace = os.path.dirname(os.path.realpath('__file__'))
-    cache = os.path.join(workspace, 'cache')
+    cache = os.path.join(workspace, cache)
     cached_file_set_path = ""
 
     with cd(cache):
