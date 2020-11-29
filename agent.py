@@ -113,7 +113,8 @@ if __name__ == "__main__":
         redis_host = os.environ["REDIS_HOST"]
         redis_port = os.environ["REDIS_PORT"]
         redis_pwd = os.environ["REDIS_PWD"]
-        use_cache = os.environ["USE_CACHE"]
+        # use_cache = os.environ["USE_CACHE"]
+        use_cache = "false"
     except (KeyError, NameError) as e:
         print(e)
         sys.exit(1)
@@ -212,10 +213,10 @@ if __name__ == "__main__":
                 l_r_mapping).as_new_file_set(output_file_set)["id"]
 
             # Copy to cache 
-            local_output_path = os.path.abspath(output_path)
-            cache_output_path = os.path.join(cache, project_id, output_file_set)
-            copy_tree(local_output_path, cache_output_path)
-            fileset_meta['__cached__'] = True
+            # local_output_path = os.path.abspath(output_path)
+            # cache_output_path = os.path.join(cache, project_id, output_file_set)
+            # copy_tree(local_output_path, cache_output_path)
+            # fileset_meta['__cached__'] = True
 
             # Update job meta data
             try:
