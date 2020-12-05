@@ -133,12 +133,12 @@ if __name__ == "__main__":
     cached_file_set_path = ""
 
     with cd(cache):
-        print("*" * 20)
-        print('listing files in %s' % cache)
-        for path, subdirs, files in os.walk(os.path.dirname(os.path.realpath('__file__'))):
-            for name in files:
-                print(os.path.join(path, name))
-        print("*" * 20)
+        # print("*" * 20)
+        # print('listing files in %s' % cache)
+        # for path, subdirs, files in os.walk(os.path.dirname(os.path.realpath('__file__'))):
+        #     for name in files:
+        #         print(os.path.join(path, name))
+        # print("*" * 20)
         
         if use_cache == "true":
             cached_file_set_path = check_input_file_set(project_id, input_file_set)
