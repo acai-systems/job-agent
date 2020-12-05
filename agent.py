@@ -82,6 +82,12 @@ def check_input_file_set(project_id, input_file_set):
         if cached_file_id == "" or \
            not os.path.exists(os.path.join(cache_project_folder, cached_file_id)) or \
            not os.listdir(os.path.join(cache_project_folder, cached_file_id)):
+
+
+           print('cached file id is : ', cached_file_id)
+           print('path exists: ', os.path.exists(os.path.join(cache_project_folder, cached_file_id)))
+           print('dir not empty: ', os.listdir(os.path.join(cache_project_folder, cached_file_id)))
+
            
            cached_file_id = Meta.get_file_set_meta(input_file_set)['data'][0]['_id']
            start = timeit.default_timer()
