@@ -154,6 +154,13 @@ if __name__ == "__main__":
 
         else:
             FileSet.download_file_set(input_file_set, ".", force=True)
+
+        print("*" * 20)
+        print('listing files in workspace')
+        for path, subdirs, files in os.walk(os.path.dirname(os.path.realpath('__file__'))):
+            for name in files:
+                print(os.path.join(path, name))
+        print("*" * 20)
             
         # Download and unzip code
         code_path = "./" + code
