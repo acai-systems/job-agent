@@ -4,7 +4,6 @@ import sys
 import zipfile
 from os import path
 import time
-import timeit
 from shutil import copy2
 from distutils.dir_util import copy_tree
 
@@ -87,10 +86,7 @@ def check_input_file_set(project_id, input_file_set):
                cached_file_id = Meta.get_file_set_meta(input_file_set)['data'][0]['_id']
                Meta.update_file_set_meta(input_file_set, [], {'__cached__' : True})
 
-           start = timeit.default_timer()
            FileSet.download_file_set(input_file_set, os.path.join(cache_project_folder, cached_file_id), force=True)
-           stop = timeit.default_timer()
-           print('[cache]: cache miss, downloading from data lake, total time: ', stop - start)  
 
         return os.path.join(cache_project_folder, cached_file_id)
         
@@ -147,21 +143,11 @@ if __name__ == "__main__":
         publisher.progress("Downloading")
 
         if cached_file_set_path != "":
-            start = timeit.default_timer()
             copy_tree(cached_file_set_path, '.')
-            stop = timeit.default_timer()
-            print('[cache]: cache hit, downloading from cache, total time: ', stop - start)  
 
         else:
             FileSet.download_file_set(input_file_set, ".", force=True)
 
-        print("*" * 20)
-        print('listing files in workspace')
-        for path, subdirs, files in os.walk(os.path.dirname(os.path.realpath('__file__'))):
-            for name in files:
-                print(os.path.join(path, name))
-        print("*" * 20)
-            
         # Download and unzip code
         code_path = "./" + code
         File.download({code: code_path})
