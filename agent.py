@@ -91,6 +91,7 @@ if __name__ == "__main__":
     with cd(data_lake):
         publisher.progress("Downloading")
         print("Downloading input fileset " + input_file_set)
+        time.sleep(600)
         FileSet.download_file_set(input_file_set, ".", force=True)
 
         # Download and unzip code
